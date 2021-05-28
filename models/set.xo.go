@@ -23,10 +23,14 @@ type Set struct {
 	Isonlineonly     int            `json:"isOnlineOnly" db:"isOnlineOnly"`         // isOnlineOnly
 	Ispartialpreview int            `json:"isPartialPreview" db:"isPartialPreview"` // isPartialPreview
 	Keyrunecode      sql.NullString `json:"keyruneCode" db:"keyruneCode"`           // keyruneCode
+	Mcmid            sql.NullInt64  `json:"mcmId" db:"mcmId"`                       // mcmId
+	Mcmidextras      sql.NullInt64  `json:"mcmIdExtras" db:"mcmIdExtras"`           // mcmIdExtras
+	Mcmname          sql.NullString `json:"mcmName" db:"mcmName"`                   // mcmName
 	Mtgocode         sql.NullString `json:"mtgoCode" db:"mtgoCode"`                 // mtgoCode
 	Name             sql.NullString `json:"name" db:"name"`                         // name
 	Parentcode       sql.NullString `json:"parentCode" db:"parentCode"`             // parentCode
 	Releasedate      xoutil.SqTime  `json:"releaseDate" db:"releaseDate"`           // releaseDate
+	Sealedproduct    sql.NullString `json:"sealedProduct" db:"sealedProduct"`       // sealedProduct
 	Tcgplayergroupid sql.NullInt64  `json:"tcgplayerGroupId" db:"tcgplayerGroupId"` // tcgplayerGroupId
 	Totalsetsize     sql.NullInt64  `json:"totalSetSize" db:"totalSetSize"`         // totalSetSize
 	Type             sql.NullString `json:"type" db:"type"`                         // type
@@ -56,14 +60,14 @@ func (s *Set) Insert(db XODB) error {
 
 	// sql insert query, primary key provided by sequence
 	const sqlstr = `INSERT INTO sets (` +
-		`baseSetSize, block, booster, code, isFoilOnly, isForeignOnly, isNonFoilOnly, isOnlineOnly, isPartialPreview, keyruneCode, mtgoCode, name, parentCode, releaseDate, tcgplayerGroupId, totalSetSize, type` +
+		`baseSetSize, block, booster, code, isFoilOnly, isForeignOnly, isNonFoilOnly, isOnlineOnly, isPartialPreview, keyruneCode, mcmId, mcmIdExtras, mcmName, mtgoCode, name, parentCode, releaseDate, sealedProduct, tcgplayerGroupId, totalSetSize, type` +
 		`) VALUES (` +
-		`?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?` +
+		`?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?` +
 		`) RETURNING id`
 
 	// run query
-	XOLog(sqlstr, s.Basesetsize, s.Block, s.Booster, s.Code, s.Isfoilonly, s.Isforeignonly, s.Isnonfoilonly, s.Isonlineonly, s.Ispartialpreview, s.Keyrunecode, s.Mtgocode, s.Name, s.Parentcode, s.Releasedate, s.Tcgplayergroupid, s.Totalsetsize, s.Type)
-	err = db.QueryRow(sqlstr, s.Basesetsize, s.Block, s.Booster, s.Code, s.Isfoilonly, s.Isforeignonly, s.Isnonfoilonly, s.Isonlineonly, s.Ispartialpreview, s.Keyrunecode, s.Mtgocode, s.Name, s.Parentcode, s.Releasedate, s.Tcgplayergroupid, s.Totalsetsize, s.Type).Scan(&s.ID)
+	XOLog(sqlstr, s.Basesetsize, s.Block, s.Booster, s.Code, s.Isfoilonly, s.Isforeignonly, s.Isnonfoilonly, s.Isonlineonly, s.Ispartialpreview, s.Keyrunecode, s.Mcmid, s.Mcmidextras, s.Mcmname, s.Mtgocode, s.Name, s.Parentcode, s.Releasedate, s.Sealedproduct, s.Tcgplayergroupid, s.Totalsetsize, s.Type)
+	err = db.QueryRow(sqlstr, s.Basesetsize, s.Block, s.Booster, s.Code, s.Isfoilonly, s.Isforeignonly, s.Isnonfoilonly, s.Isonlineonly, s.Ispartialpreview, s.Keyrunecode, s.Mcmid, s.Mcmidextras, s.Mcmname, s.Mtgocode, s.Name, s.Parentcode, s.Releasedate, s.Sealedproduct, s.Tcgplayergroupid, s.Totalsetsize, s.Type).Scan(&s.ID)
 	if err != nil {
 		return err
 	}
@@ -90,14 +94,14 @@ func (s *Set) Update(db XODB) error {
 
 	// sql query
 	const sqlstr = `UPDATE sets SET (` +
-		`baseSetSize, block, booster, code, isFoilOnly, isForeignOnly, isNonFoilOnly, isOnlineOnly, isPartialPreview, keyruneCode, mtgoCode, name, parentCode, releaseDate, tcgplayerGroupId, totalSetSize, type` +
+		`baseSetSize, block, booster, code, isFoilOnly, isForeignOnly, isNonFoilOnly, isOnlineOnly, isPartialPreview, keyruneCode, mcmId, mcmIdExtras, mcmName, mtgoCode, name, parentCode, releaseDate, sealedProduct, tcgplayerGroupId, totalSetSize, type` +
 		`) = ( ` +
-		`?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?` +
-		`) WHERE id = $18`
+		`?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?` +
+		`) WHERE id = $22`
 
 	// run query
-	XOLog(sqlstr, s.Basesetsize, s.Block, s.Booster, s.Code, s.Isfoilonly, s.Isforeignonly, s.Isnonfoilonly, s.Isonlineonly, s.Ispartialpreview, s.Keyrunecode, s.Mtgocode, s.Name, s.Parentcode, s.Releasedate, s.Tcgplayergroupid, s.Totalsetsize, s.Type, s.ID)
-	_, err = db.Exec(sqlstr, s.Basesetsize, s.Block, s.Booster, s.Code, s.Isfoilonly, s.Isforeignonly, s.Isnonfoilonly, s.Isonlineonly, s.Ispartialpreview, s.Keyrunecode, s.Mtgocode, s.Name, s.Parentcode, s.Releasedate, s.Tcgplayergroupid, s.Totalsetsize, s.Type, s.ID)
+	XOLog(sqlstr, s.Basesetsize, s.Block, s.Booster, s.Code, s.Isfoilonly, s.Isforeignonly, s.Isnonfoilonly, s.Isonlineonly, s.Ispartialpreview, s.Keyrunecode, s.Mcmid, s.Mcmidextras, s.Mcmname, s.Mtgocode, s.Name, s.Parentcode, s.Releasedate, s.Sealedproduct, s.Tcgplayergroupid, s.Totalsetsize, s.Type, s.ID)
+	_, err = db.Exec(sqlstr, s.Basesetsize, s.Block, s.Booster, s.Code, s.Isfoilonly, s.Isforeignonly, s.Isnonfoilonly, s.Isonlineonly, s.Ispartialpreview, s.Keyrunecode, s.Mcmid, s.Mcmidextras, s.Mcmname, s.Mtgocode, s.Name, s.Parentcode, s.Releasedate, s.Sealedproduct, s.Tcgplayergroupid, s.Totalsetsize, s.Type, s.ID)
 	return err
 }
 
@@ -123,18 +127,18 @@ func (s *Set) Upsert(db XODB) error {
 
 	// sql query
 	const sqlstr = `INSERT INTO sets (` +
-		`id, baseSetSize, block, booster, code, isFoilOnly, isForeignOnly, isNonFoilOnly, isOnlineOnly, isPartialPreview, keyruneCode, mtgoCode, name, parentCode, releaseDate, tcgplayerGroupId, totalSetSize, type` +
+		`id, baseSetSize, block, booster, code, isFoilOnly, isForeignOnly, isNonFoilOnly, isOnlineOnly, isPartialPreview, keyruneCode, mcmId, mcmIdExtras, mcmName, mtgoCode, name, parentCode, releaseDate, sealedProduct, tcgplayerGroupId, totalSetSize, type` +
 		`) VALUES (` +
-		`?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?` +
+		`?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?` +
 		`) ON CONFLICT (id) DO UPDATE SET (` +
-		`id, baseSetSize, block, booster, code, isFoilOnly, isForeignOnly, isNonFoilOnly, isOnlineOnly, isPartialPreview, keyruneCode, mtgoCode, name, parentCode, releaseDate, tcgplayerGroupId, totalSetSize, type` +
+		`id, baseSetSize, block, booster, code, isFoilOnly, isForeignOnly, isNonFoilOnly, isOnlineOnly, isPartialPreview, keyruneCode, mcmId, mcmIdExtras, mcmName, mtgoCode, name, parentCode, releaseDate, sealedProduct, tcgplayerGroupId, totalSetSize, type` +
 		`) = (` +
-		`EXCLUDED.id, EXCLUDED.baseSetSize, EXCLUDED.block, EXCLUDED.booster, EXCLUDED.code, EXCLUDED.isFoilOnly, EXCLUDED.isForeignOnly, EXCLUDED.isNonFoilOnly, EXCLUDED.isOnlineOnly, EXCLUDED.isPartialPreview, EXCLUDED.keyruneCode, EXCLUDED.mtgoCode, EXCLUDED.name, EXCLUDED.parentCode, EXCLUDED.releaseDate, EXCLUDED.tcgplayerGroupId, EXCLUDED.totalSetSize, EXCLUDED.type` +
+		`EXCLUDED.id, EXCLUDED.baseSetSize, EXCLUDED.block, EXCLUDED.booster, EXCLUDED.code, EXCLUDED.isFoilOnly, EXCLUDED.isForeignOnly, EXCLUDED.isNonFoilOnly, EXCLUDED.isOnlineOnly, EXCLUDED.isPartialPreview, EXCLUDED.keyruneCode, EXCLUDED.mcmId, EXCLUDED.mcmIdExtras, EXCLUDED.mcmName, EXCLUDED.mtgoCode, EXCLUDED.name, EXCLUDED.parentCode, EXCLUDED.releaseDate, EXCLUDED.sealedProduct, EXCLUDED.tcgplayerGroupId, EXCLUDED.totalSetSize, EXCLUDED.type` +
 		`)`
 
 	// run query
-	XOLog(sqlstr, s.ID, s.Basesetsize, s.Block, s.Booster, s.Code, s.Isfoilonly, s.Isforeignonly, s.Isnonfoilonly, s.Isonlineonly, s.Ispartialpreview, s.Keyrunecode, s.Mtgocode, s.Name, s.Parentcode, s.Releasedate, s.Tcgplayergroupid, s.Totalsetsize, s.Type)
-	_, err = db.Exec(sqlstr, s.ID, s.Basesetsize, s.Block, s.Booster, s.Code, s.Isfoilonly, s.Isforeignonly, s.Isnonfoilonly, s.Isonlineonly, s.Ispartialpreview, s.Keyrunecode, s.Mtgocode, s.Name, s.Parentcode, s.Releasedate, s.Tcgplayergroupid, s.Totalsetsize, s.Type)
+	XOLog(sqlstr, s.ID, s.Basesetsize, s.Block, s.Booster, s.Code, s.Isfoilonly, s.Isforeignonly, s.Isnonfoilonly, s.Isonlineonly, s.Ispartialpreview, s.Keyrunecode, s.Mcmid, s.Mcmidextras, s.Mcmname, s.Mtgocode, s.Name, s.Parentcode, s.Releasedate, s.Sealedproduct, s.Tcgplayergroupid, s.Totalsetsize, s.Type)
+	_, err = db.Exec(sqlstr, s.ID, s.Basesetsize, s.Block, s.Booster, s.Code, s.Isfoilonly, s.Isforeignonly, s.Isnonfoilonly, s.Isonlineonly, s.Ispartialpreview, s.Keyrunecode, s.Mcmid, s.Mcmidextras, s.Mcmname, s.Mtgocode, s.Name, s.Parentcode, s.Releasedate, s.Sealedproduct, s.Tcgplayergroupid, s.Totalsetsize, s.Type)
 	if err != nil {
 		return err
 	}
@@ -183,7 +187,7 @@ func SetByID(db XODB, id sql.NullInt64) (*Set, error) {
 
 	// sql query
 	const sqlstr = `SELECT ` +
-		`id, baseSetSize, block, booster, code, isFoilOnly, isForeignOnly, isNonFoilOnly, isOnlineOnly, isPartialPreview, keyruneCode, mtgoCode, name, parentCode, releaseDate, tcgplayerGroupId, totalSetSize, type ` +
+		`id, baseSetSize, block, booster, code, isFoilOnly, isForeignOnly, isNonFoilOnly, isOnlineOnly, isPartialPreview, keyruneCode, mcmId, mcmIdExtras, mcmName, mtgoCode, name, parentCode, releaseDate, sealedProduct, tcgplayerGroupId, totalSetSize, type ` +
 		`FROM sets ` +
 		`WHERE id = ?`
 
@@ -193,7 +197,7 @@ func SetByID(db XODB, id sql.NullInt64) (*Set, error) {
 		_exists: true,
 	}
 
-	err = db.QueryRow(sqlstr, id).Scan(&s.ID, &s.Basesetsize, &s.Block, &s.Booster, &s.Code, &s.Isfoilonly, &s.Isforeignonly, &s.Isnonfoilonly, &s.Isonlineonly, &s.Ispartialpreview, &s.Keyrunecode, &s.Mtgocode, &s.Name, &s.Parentcode, &s.Releasedate, &s.Tcgplayergroupid, &s.Totalsetsize, &s.Type)
+	err = db.QueryRow(sqlstr, id).Scan(&s.ID, &s.Basesetsize, &s.Block, &s.Booster, &s.Code, &s.Isfoilonly, &s.Isforeignonly, &s.Isnonfoilonly, &s.Isonlineonly, &s.Ispartialpreview, &s.Keyrunecode, &s.Mcmid, &s.Mcmidextras, &s.Mcmname, &s.Mtgocode, &s.Name, &s.Parentcode, &s.Releasedate, &s.Sealedproduct, &s.Tcgplayergroupid, &s.Totalsetsize, &s.Type)
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +213,7 @@ func SetByCode(db XODB, code string) (*Set, error) {
 
 	// sql query
 	const sqlstr = `SELECT ` +
-		`id, baseSetSize, block, booster, code, isFoilOnly, isForeignOnly, isNonFoilOnly, isOnlineOnly, isPartialPreview, keyruneCode, mtgoCode, name, parentCode, releaseDate, tcgplayerGroupId, totalSetSize, type ` +
+		`id, baseSetSize, block, booster, code, isFoilOnly, isForeignOnly, isNonFoilOnly, isOnlineOnly, isPartialPreview, keyruneCode, mcmId, mcmIdExtras, mcmName, mtgoCode, name, parentCode, releaseDate, sealedProduct, tcgplayerGroupId, totalSetSize, type ` +
 		`FROM sets ` +
 		`WHERE code = ?`
 
@@ -219,7 +223,7 @@ func SetByCode(db XODB, code string) (*Set, error) {
 		_exists: true,
 	}
 
-	err = db.QueryRow(sqlstr, code).Scan(&s.ID, &s.Basesetsize, &s.Block, &s.Booster, &s.Code, &s.Isfoilonly, &s.Isforeignonly, &s.Isnonfoilonly, &s.Isonlineonly, &s.Ispartialpreview, &s.Keyrunecode, &s.Mtgocode, &s.Name, &s.Parentcode, &s.Releasedate, &s.Tcgplayergroupid, &s.Totalsetsize, &s.Type)
+	err = db.QueryRow(sqlstr, code).Scan(&s.ID, &s.Basesetsize, &s.Block, &s.Booster, &s.Code, &s.Isfoilonly, &s.Isforeignonly, &s.Isnonfoilonly, &s.Isonlineonly, &s.Ispartialpreview, &s.Keyrunecode, &s.Mcmid, &s.Mcmidextras, &s.Mcmname, &s.Mtgocode, &s.Name, &s.Parentcode, &s.Releasedate, &s.Sealedproduct, &s.Tcgplayergroupid, &s.Totalsetsize, &s.Type)
 	if err != nil {
 		return nil, err
 	}
