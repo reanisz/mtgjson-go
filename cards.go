@@ -8,22 +8,49 @@ import (
 	"github.com/reanisz/mtgjson-go/models"
 )
 
-func (mtgjson *Database) FindCardsByName(cardName string) ([]*models.Card, error) {
-	rows, err := mtgjson.db.Queryx("SELECT * FROM cards WHERE name = ?", cardName)
+func (mtgjson *Database) FindCardsByNames(cardNames []string) (map[string][]*models.Card, error) {
+	query := fmt.Sprintf(`SELECT *
+	  FROM cards
+	  WHERE cards.name in ( %v )
+	  ;
+	`, generate_placeholders(len(cardNames)))
+
+	var args []interface{}
+	for i := range cardNames {
+		args = append(args, &cardNames[i])
+	}
+
+	rows, err := mtgjson.db.Queryx(query, args...)
 	if err != nil {
 		return nil, err
 	}
 
-	var res []*models.Card
+	res := make(map[string][]*models.Card)
 
 	for rows.Next() {
 		card := new(models.Card)
 		rows.StructScan(card)
 
-		res = append(res, card)
+		res[card.Name.String] = append(res[card.Name.String], card)
 	}
 
 	return res, nil
+}
+
+func (mtgjson *Database) FindCardsByName(cardName string) ([]*models.Card, error) {
+	found, err := mtgjson.FindCardsByNames([]string{cardName})
+
+	if err != nil {
+		return nil, err
+	}
+
+	ret, ok := found[cardName]
+
+	if !ok {
+		ret = []*models.Card{}
+	}
+
+	return ret, nil
 }
 
 func generate_placeholders(num int) string {
@@ -78,12 +105,20 @@ type CardWithAllFaceData struct {
 	OtherFace []*CardWithForeignData
 }
 
-func (mtgjson *Database) FindCardsByForeignName(cardName string) ([]*CardWithForeignData, error) {
-	query := `SELECT *
+func (mtgjson *Database) FindCardsByForeignNames(cardNames []string) (map[string][]*CardWithForeignData, error) {
+	res := make(map[string][]*CardWithForeignData)
+
+	query := fmt.Sprintf(`SELECT *
 	   FROM foreign_data
-	   WHERE foreign_data.name = ?
-	 `
-	rows, err := mtgjson.db.Queryx(query, cardName)
+       WHERE foreign_data.name in ( %v )
+       `, generate_placeholders(len(cardNames)))
+
+	var args []interface{}
+	for i := range cardNames {
+		args = append(args, &cardNames[i])
+	}
+
+	rows, err := mtgjson.db.Queryx(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -104,16 +139,30 @@ func (mtgjson *Database) FindCardsByForeignName(cardName string) ([]*CardWithFor
 		return nil, err
 	}
 
-	var res []*CardWithForeignData
 	for _, foreign := range founded_foriegn {
 		r := new(CardWithForeignData)
 		r.ForeignData = foreign
 		r.Card = cards[foreign.UUID.String]
 
-		res = append(res, r)
+		res[r.ForeignData.Name.String] = append(res[r.ForeignData.Name.String], r)
 	}
 
 	return res, nil
+}
+func (mtgjson *Database) FindCardsByForeignName(cardName string) ([]*CardWithForeignData, error) {
+	found, err := mtgjson.FindCardsByForeignNames([]string{cardName})
+
+	if err != nil {
+		return nil, err
+	}
+
+	ret, ok := found[cardName]
+
+	if !ok {
+		ret = []*CardWithForeignData{}
+	}
+
+	return ret, nil
 }
 
 func (mtgjson *Database) HasPaperCard(card *models.Card) bool {
@@ -153,8 +202,10 @@ func (mtgjson *Database) SelectBestMatchCardWithForeign(cards []*CardWithForeign
 		if eq, cmp := compBool(lhs.ForeignData == nil, rhs.ForeignData == nil); !eq {
 			return cmp
 		}
-		if eq, cmp := compBool(len(lhs.ForeignData.Text.String) == 0, len(lhs.ForeignData.Text.String) == 0); !eq {
-			return !cmp
+		if lhs.ForeignData != nil {
+			if eq, cmp := compBool(len(lhs.ForeignData.Text.String) == 0, len(lhs.ForeignData.Text.String) == 0); !eq {
+				return !cmp
+			}
 		}
 		if eq, cmp := mtgjson.CompareAsBestSet(lhsSet, rhsSet); !eq {
 			return cmp
