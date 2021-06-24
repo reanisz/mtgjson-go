@@ -92,3 +92,35 @@ func TestFindCardByForiegnName(t *testing.T) {
 	}
 
 }
+
+func TestFindForeignCardsByEnglishName(t *testing.T) {
+	db, teardown := SetupDatabase(t)
+	defer teardown()
+
+	res, err := db.FindForeignCardsByEnglishNames([]string{"Opt", "Shock"}, "Japanese")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	check := func(name string, expect string) {
+		cards := res[name]
+		if 0 == len(cards) {
+			t.Fatalf("card of %v is not found", expect)
+			return
+		}
+		card := db.SelectBestMatchCardWithForeign(cards).Mainface
+		foreign := card.ForeignData
+		if foreign == nil {
+			t.Fatalf("foreign_data of %v is not found", expect)
+			return
+		}
+		foreign_name := foreign.Name.String
+		if foreign_name != expect {
+			t.Fatalf("invalid found by \"%v\", expected %v", foreign_name, expect)
+			return
+		}
+	}
+
+	check("Opt", "選択")
+	check("Shock", "ショック")
+}

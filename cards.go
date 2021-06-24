@@ -95,6 +95,38 @@ func (mtgjson *Database) FindCardsByUUIDs(uuids []string) (map[string]*models.Ca
 	return res, nil
 }
 
+func (mtgjson *Database) FindForeignDataByUUIDs(uuids []string, language string) (map[string]*models.ForeignDatum, error) {
+	query := fmt.Sprintf(`SELECT *
+	  FROM foreign_data
+	  WHERE 
+	    foreign_data.language = ?
+	    AND foreign_data.uuid in ( %v )
+	  ;
+	`, generate_placeholders(len(uuids)))
+
+	var args []interface{}
+	args = append(args, &language)
+	for i := range uuids {
+		args = append(args, &uuids[i])
+	}
+
+	rows, err := mtgjson.db.Queryx(query, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	res := make(map[string]*models.ForeignDatum)
+
+	for rows.Next() {
+		foreign_data := new(models.ForeignDatum)
+		rows.StructScan(foreign_data)
+
+		res[foreign_data.UUID.String] = foreign_data
+	}
+
+	return res, nil
+}
+
 type CardWithForeignData struct {
 	Card        *models.Card         `db:"cards"`
 	ForeignData *models.ForeignDatum `db:"foreign_data"`
@@ -165,6 +197,67 @@ func (mtgjson *Database) FindCardsByForeignName(cardName string) ([]*CardWithFor
 	return ret, nil
 }
 
+func (mtgjson *Database) FindForeignCardsByEnglishNames(cardNames []string, language string) (map[string][]*CardWithForeignData, error) {
+	res := make(map[string][]*CardWithForeignData)
+
+	query := fmt.Sprintf(`SELECT *
+	   FROM cards
+       WHERE cards.name in ( %v )
+       `, generate_placeholders(len(cardNames)))
+
+	var args []interface{}
+	for i := range cardNames {
+		args = append(args, &cardNames[i])
+	}
+
+	rows, err := mtgjson.db.Queryx(query, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	var uuids []string
+	var founded_cards []*models.Card
+
+	for rows.Next() {
+		data := new(models.Card)
+		rows.StructScan(data)
+
+		founded_cards = append(founded_cards, data)
+		uuids = append(uuids, data.UUID)
+	}
+
+	foreign_data, err := mtgjson.FindForeignDataByUUIDs(uuids, language)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, card := range founded_cards {
+		r := new(CardWithForeignData)
+		r.Card = card
+		r.ForeignData = foreign_data[card.UUID]
+
+		res[r.Card.Name.String] = append(res[r.Card.Name.String], r)
+	}
+
+	return res, nil
+}
+
+func (mtgjson *Database) FindForeignCardsByEnglishName(cardName string, language string) ([]*CardWithForeignData, error) {
+	found, err := mtgjson.FindForeignCardsByEnglishNames([]string{cardName}, language)
+
+	if err != nil {
+		return nil, err
+	}
+
+	ret, ok := found[cardName]
+
+	if !ok {
+		ret = []*CardWithForeignData{}
+	}
+
+	return ret, nil
+}
+
 func (mtgjson *Database) HasPaperCard(card *models.Card) bool {
 	return strings.Contains(card.Availability.String, "paper")
 }
@@ -190,6 +283,10 @@ func (mtgjson *Database) SelectBestMatchCardWithForeign(cards []*CardWithForeign
 		lhs := cards[i]
 		rhs := cards[j]
 
+		if eq, cmp := compBool(lhs.ForeignData == nil, rhs.ForeignData == nil); !eq {
+			return !cmp
+		}
+
 		lhsSet, err := mtgjson.GetSetByCode(lhs.Card.Setcode.String)
 		if err != nil {
 			panic(err)
@@ -199,9 +296,6 @@ func (mtgjson *Database) SelectBestMatchCardWithForeign(cards []*CardWithForeign
 			panic(err)
 		}
 
-		if eq, cmp := compBool(lhs.ForeignData == nil, rhs.ForeignData == nil); !eq {
-			return cmp
-		}
 		if lhs.ForeignData != nil {
 			if eq, cmp := compBool(len(lhs.ForeignData.Text.String) == 0, len(lhs.ForeignData.Text.String) == 0); !eq {
 				return !cmp
